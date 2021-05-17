@@ -200,12 +200,13 @@ exports.tweet_unlike = (req, res, next) => {
 // postes a tweet to a parentTweet
 // don't check if the parentTweet exists, I believe twitter allows
 //event if the tweet was revmoved
-exports.tweet_thread_post = async(req, res, next) => {
+exports.tweet_thread_post = (req, res, next) => {
     const parentTweetId = req.params.parentTweetId;
+    const userId = req.userData.userId;
 
     const tweet = new Tweet({
         _id: new mongoose.Types.ObjectId(),
-        author: req.body.author,
+        author: userId,
         text: req.body.text,
         parentTweetId: parentTweetId
     });
@@ -215,8 +216,8 @@ exports.tweet_thread_post = async(req, res, next) => {
             res.status(201).json({
                 message: "Tweet tweeted succesfully",
                 createdTweet: {
-                    author: result.make,
-                    text: result.module,
+                    author: result.author,
+                    text: result.text,
                     _id: result._id
                 }
             });
@@ -238,7 +239,6 @@ exports.tweet_tread_of_one_tweet = (req, res, next) => {
         .populate('author', 'email')
         .exec()
         .then(doc => {
-
             if (doc) {
                 res.status(200).json({
                     tweet: doc,
@@ -255,4 +255,67 @@ exports.tweet_tread_of_one_tweet = (req, res, next) => {
             console.log(err);
             res.status(500).json({ error: err });
         });
+}
+
+// Creats a new tweet that links to original tweet
+exports.tweet_retweet_post = (req, res, next) => {
+    const fromTweetId = req.params.fromTweetId;
+    const userId = req.userData.userId;
+    const text = req.body.text;
+
+    const tweet = new Tweet({
+        _id: new mongoose.Types.ObjectId(),
+        author: userId,
+        text: text,
+        tweetFrom: fromTweetId
+    });
+    tweet
+        .save()
+        .then(result => {
+            res.status(201).json({
+                message: "Tweet Retweeted succesfully",
+                createdTweet: {
+                    _id: result._id,
+                    text: result.text,
+                    author: result.author,
+                    request: {
+                        type: 'GET',
+                        url: 'http://localhost:3000/tweets/' + fromTweetId
+                    }
+                }
+            });
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json({
+                error: err
+            });
+        });
+}
+
+// show a Retweet, populate the original tweet, links to original tweet
+exports.tweet_get_one_retweet_tweet = (req, res, next) => {
+    const id = req.params.tweetId;
+    console.log(id)
+    Tweet.findById(id)
+        .populate('tweetFrom')
+        .exec()
+        .then(doc => {
+            if (doc) {
+                res.status(200).json({
+                    tweet: doc,
+                    request: {
+                        type: 'GET',
+                        url: 'http://localhost:3000/tweets/' + doc.tweetFrom._id
+                    }
+                });
+            } else {
+                res.status(404).json({ message: 'No valid entry found' })
+            }
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json({ error: err });
+        });
+
 }
