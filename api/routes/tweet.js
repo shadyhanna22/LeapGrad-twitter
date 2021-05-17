@@ -34,6 +34,15 @@ router.put("/like/:tweetId", checkAuth, TweetController.tweet_like);
 router.put("/unlike/:tweetId", checkAuth, TweetController.tweet_unlike);
 
 /**------------------------------------------------------------------*/
+//ReTweet routes
+
+// post a new tweet but as a thread to another tweet
+router.post("/retweet/:fromTweetId", checkAuth, TweetController.tweet_retweet_post);
+
+// gets all posts under the same parent tweet
+router.get("/retweet/:tweetId", checkAuth, TweetController.tweet_get_one_retweet_tweet);
+
+/**------------------------------------------------------------------*/
 //Threading routes
 
 // post a new tweet but as a thread to another tweet
